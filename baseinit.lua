@@ -6,8 +6,10 @@ local PYRA_W = 23
 local PYRA_Wm = PYRA_W - 1
 -- Half of (Pyramid width minus 1)
 local PYRA_Wh = PYRA_Wm / 2
--- Minimum spawn height
+
+-- Minimum and maximum spawn heights
 local PYRA_MIN_Y = 3
+local PYRA_MAX_Y = 500
 
 tsm_pyramids = {}
 
@@ -237,7 +239,8 @@ local function make(pos, brick, sandstone, stone, sand, ptype, room_id)
     return ok, msg
 end
 
-local perl1 = { SEED1 = 9130, OCTA1 = 3, PERS1 = 0.5, SCAL1 = 250 } -- Values should match minetest mapgen V6 desert noise.
+local perl1 = { SEED1 = 9130, OCTA1 = 1, PERS1 = 0.5, SCAL1 =  25 } -- Values should match minetest mapgen V7 desert noise
+
 local perlin1 -- perlin noise buffer
 
 local function hlp_fnct(pos, name)
@@ -312,7 +315,7 @@ end
 -- Up to one pyramid per mapchunk.
 
 minetest.register_on_generated(function(minp, maxp, seed)
-    if maxp.y < PYRA_MIN_Y then return end
+    if maxp.y < PYRA_MIN_Y or maxp.y > PYRA_MAX_Y then return end
 
     -- TODO: Use Minetests pseudo-random tools
     math.randomseed(seed)
@@ -346,8 +349,13 @@ minetest.register_on_generated(function(minp, maxp, seed)
             minetest.log("verbose", "[tsm_pyramids] Pyramid not placed, no suitable surface. minp="..minetest.pos_to_string(minp))
             return
         end
-        if p2.y < PYRA_MIN_Y then
-            minetest.log("info", "[tsm_pyramids] Pyramid not placed, too deep. p2="..minetest.pos_to_string(p2))
+        -- Select the material type by the most prominent node type
+        -- E.g. if desert sand is most prominent, we place a desert sandstone pyramid
+        if sand_cnt_max_id then
+            sand = sands[sand_cnt_max_id]
+        end
+        if p2.y < PYRA_MIN_Y or p2.y > PYRA_MAX_Y then
+            minetest.log("info", "[tsm_pyramids] Not placed, Y out of range. p2="..minetest.pos_to_string(p2))
             return
         end
         -- Now sink the pyramid until each corner of it is no longer floating in mid-air
